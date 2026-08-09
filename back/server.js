@@ -485,7 +485,7 @@ function getCurrentFullscreenState() {
   const minMs = timerState.minMins * 60 * 1000;
   const totalCycleMs = maxMs + minMs;
   if (totalCycleMs === 0) return true;
-  const elapsed = (Date.now() - timerState.startTime) % totalCycleMs;
+  const elapsed = Math.max(0, Date.now() - timerState.startTime) % totalCycleMs;
   return elapsed < maxMs;
 }
 
@@ -528,7 +528,7 @@ function startTimer(maxMins, minMins) {
   broadcast({ type: 'set_fullscreen', active: true, fullscreen: true });
 
   timerState.intervalId = setInterval(() => {
-    const elapsed = (Date.now() - timerState.startTime) % totalCycleMs;
+    const elapsed = Math.max(0, Date.now() - timerState.startTime) % totalCycleMs;
     const shouldBeMax = elapsed < maxMs;
     if (shouldBeMax !== isMax) {
       isMax = shouldBeMax;
@@ -554,12 +554,12 @@ function resumeTimer() {
   const minMs = timerState.minMins * 60 * 1000;
   const totalCycleMs = maxMs + minMs;
   let isMax = true;
-  const elapsedSinceStart = (Date.now() - timerState.startTime) % totalCycleMs;
+  const elapsedSinceStart = Math.max(0, Date.now() - timerState.startTime) % totalCycleMs;
   isMax = elapsedSinceStart < maxMs;
   broadcast({ type: 'set_fullscreen', active: true, fullscreen: isMax });
 
   timerState.intervalId = setInterval(() => {
-    const elapsed = (Date.now() - timerState.startTime) % totalCycleMs;
+    const elapsed = Math.max(0, Date.now() - timerState.startTime) % totalCycleMs;
     const shouldBeMax = elapsed < maxMs;
     if (shouldBeMax !== isMax) {
       isMax = shouldBeMax;

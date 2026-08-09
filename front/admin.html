@@ -2065,7 +2065,7 @@
 
         const updateUI = () => {
           const now = Date.now();
-          const elapsed = (now - startTime) % cycleMs;
+          const elapsed = Math.max(0, now - startTime) % cycleMs;
           
           let stateName = "";
           let msLeft = 0;
