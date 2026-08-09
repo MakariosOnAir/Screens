@@ -5,27 +5,27 @@ echo Opening screens display in kiosk fullscreen mode...
 set "URL=https://st-philopateer-screens.fly.dev/screens"
 
 if exist "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" (
-    start "" "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" --kiosk "%URL%"
+    start "" "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" --kiosk --user-data-dir="%TEMP%\BraveKioskProfile" "%URL%"
     goto next
 )
 if exist "C:\Program Files\Google\Chrome\Application\chrome.exe" (
-    start "" "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk "%URL%"
+    start "" "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk --user-data-dir="%TEMP%\ChromeKioskProfile" "%URL%"
     goto next
 )
 if exist "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" (
-    start "" "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" --kiosk "%URL%"
+    start "" "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" --kiosk --user-data-dir="%TEMP%\ChromeKioskProfile" "%URL%"
     goto next
 )
 if exist "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" (
-    start "" "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --kiosk "%URL%"
+    start "" "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --kiosk --user-data-dir="%TEMP%\EdgeKioskProfile" "%URL%"
     goto next
 )
 if exist "C:\Program Files\Microsoft\Edge\Application\msedge.exe" (
-    start "" "C:\Program Files\Microsoft\Edge\Application\msedge.exe" --kiosk "%URL%"
+    start "" "C:\Program Files\Microsoft\Edge\Application\msedge.exe" --kiosk --user-data-dir="%TEMP%\EdgeKioskProfile" "%URL%"
     goto next
 )
 if exist "C:\Program Files (x86)\BraveSoftware\Brave-Browser\Application\brave.exe" (
-    start "" "C:\Program Files (x86)\BraveSoftware\Brave-Browser\Application\brave.exe" --kiosk "%URL%"
+    start "" "C:\Program Files (x86)\BraveSoftware\Brave-Browser\Application\brave.exe" --kiosk --user-data-dir="%TEMP%\BraveKioskProfile" "%URL%"
     goto next
 )
 
