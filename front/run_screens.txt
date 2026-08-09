@@ -1,9 +1,38 @@
 @echo off
 title St-Philopateer Screens Launcher
 
-echo Opening screens display in default browser...
-start "" "https://st-philopateer-screens.fly.dev/screens"
+echo Opening screens display in fullscreen...
+set "URL=https://st-philopateer-screens.fly.dev/screens"
 
+if exist "C:\Program Files\Google\Chrome\Application\chrome.exe" (
+    start "" "C:\Program Files\Google\Chrome\Application\chrome.exe" --start-fullscreen "%URL%"
+    goto next
+)
+if exist "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" (
+    start "" "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" --start-fullscreen "%URL%"
+    goto next
+)
+if exist "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" (
+    start "" "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --start-fullscreen "%URL%"
+    goto next
+)
+if exist "C:\Program Files\Microsoft\Edge\Application\msedge.exe" (
+    start "" "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --start-fullscreen "%URL%"
+    goto next
+)
+if exist "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" (
+    start "" "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" --start-fullscreen "%URL%"
+    goto next
+)
+if exist "C:\Program Files (x86)\BraveSoftware\Brave-Browser\Application\brave.exe" (
+    start "" "C:\Program Files (x86)\BraveSoftware\Brave-Browser\Application\brave.exe" --start-fullscreen "%URL%"
+    goto next
+)
+
+:: Fallback if no known browser found
+start "" "%URL%"
+
+:next
 echo Preparing companion script...
 powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://st-philopateer-screens.fly.dev/companion.ps1' -OutFile '%TEMP%\companion.ps1'"
 
