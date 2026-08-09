@@ -88,11 +88,11 @@ while ($true) {
                     foreach ($hwnd in $hwnds) {
                         if ($currentState -eq "minimize") {
                             Write-Host "$(Get-Date -Format 'HH:mm:ss') | State: MINIMIZE -> Minimizing browser window ($hwnd)..." -ForegroundColor Yellow
-                            [WindowHelper]::ShowWindowAsync($hwnd, 6) # SW_MINIMIZE (minimizes the window)
+                            [void][WindowHelper]::ShowWindowAsync($hwnd, 6) # SW_MINIMIZE (minimizes the window)
                         } else {
                             Write-Host "$(Get-Date -Format 'HH:mm:ss') | State: MAXIMIZE -> Restoring and Maximizing ($hwnd)..." -ForegroundColor Green
-                            [WindowHelper]::ShowWindowAsync($hwnd, 3) # SW_SHOWMAXIMIZED (maximizes the window)
-                            [WindowHelper]::SetForegroundWindow($hwnd)
+                            [void][WindowHelper]::ShowWindowAsync($hwnd, 3) # SW_SHOWMAXIMIZED (maximizes the window)
+                            [void][WindowHelper]::SetForegroundWindow($hwnd)
                         }
                     }
                 } else {
@@ -108,8 +108,8 @@ while ($true) {
                 $hwnds = [WindowHelper]::FindWindowsByTitle("Display-Screen")
                 if ($hwnds -and $hwnds.Count -gt 0) {
                     foreach ($hwnd in $hwnds) {
-                        [WindowHelper]::ShowWindowAsync($hwnd, 3)
-                        [WindowHelper]::SetForegroundWindow($hwnd)
+                        [void][WindowHelper]::ShowWindowAsync($hwnd, 3)
+                        [void][WindowHelper]::SetForegroundWindow($hwnd)
                     }
                 }
             }
