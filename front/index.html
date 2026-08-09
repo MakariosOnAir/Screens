@@ -1583,11 +1583,6 @@
             }
             if (msg.type === 'set_fullscreen') {
               console.log('Socket.io set_fullscreen:', msg);
-              if (msg.active && msg.fullscreen) {
-                document.body.classList.add('maximized-layout');
-              } else {
-                document.body.classList.remove('maximized-layout');
-              }
             }
 
           } catch (err) {

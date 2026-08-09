@@ -574,7 +574,7 @@ loadTimer();
 // API endpoints for timer
 app.get('/api/timer', (req, res) => {
   const { active, maxMins, minMins, startTime } = timerState;
-  res.json({ success: true, active, maxMins, minMins, startTime });
+  res.json({ success: true, active, maxMins, minMins, startTime, serverTime: Date.now() });
 });
 
 app.get('/api/timer/state', (req, res) => {

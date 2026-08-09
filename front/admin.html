@@ -2054,7 +2054,7 @@
       }
 
       let timerCountdownInterval = null;
-      function startLocalCountdown(active, maxMins, minMins, startTime) {
+      function startLocalCountdown(active, maxMins, minMins, startTime, serverTime) {
         if (timerCountdownInterval) clearInterval(timerCountdownInterval);
         if (!active || !startTime) return;
 
@@ -2063,9 +2063,14 @@
         const cycleMs = maxMs + minMs;
         const badge = document.getElementById('timer-status-badge');
 
+        const clientSyncTime = Date.now();
+        const refServerTime = serverTime || Date.now();
+        const serverElapsed = refServerTime - startTime;
+
         const updateUI = () => {
           const now = Date.now();
-          const elapsed = Math.max(0, now - startTime) % cycleMs;
+          const elapsedSinceSync = now - clientSyncTime;
+          const elapsed = (serverElapsed + elapsedSinceSync) % cycleMs;
           
           let stateName = "";
           let msLeft = 0;
@@ -2110,7 +2115,7 @@
               }
               if (maxInput) maxInput.value = data.maxMins;
               if (minInput) minInput.value = data.minMins;
-              startLocalCountdown(data.active, data.maxMins, data.minMins, data.startTime);
+              startLocalCountdown(data.active, data.maxMins, data.minMins, data.startTime, data.serverTime);
             } else {
               if (btn) btn.textContent = 'Start Timer';
               if (badge) {
