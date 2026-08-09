@@ -1444,9 +1444,23 @@
       // Socket listener moved to connectWebSocket
       document
         .getElementById("btn-fullscreen")
-        .addEventListener("click", toggleFullscreen);
+        .addEventListener("click", (e) => {
+          e.stopPropagation();
+          toggleFullscreen();
+        });
       const fsMobileBtn = document.getElementById("btn-fullscreen-mobile");
-      if (fsMobileBtn) fsMobileBtn.addEventListener("click", toggleFullscreen);
+      if (fsMobileBtn) fsMobileBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggleFullscreen();
+      });
+
+      // Auto-fullscreen on first user interaction (click/tap) anywhere on the page
+      document.addEventListener('click', function autoFS() {
+        if (!document.fullscreenElement) {
+          toggleFullscreen();
+        }
+        document.removeEventListener('click', autoFS);
+      }, { once: true });
 
       async function loadFromServer(preserveIndex) {
         try {

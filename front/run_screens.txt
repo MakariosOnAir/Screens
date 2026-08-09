@@ -1,31 +1,31 @@
 @echo off
 title St-Philopateer Screens Launcher
 
-echo Opening screens display in fullscreen...
+echo Opening screens display in kiosk fullscreen mode...
 set "URL=https://st-philopateer-screens.fly.dev/screens"
 
 if exist "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" (
-    start "" "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" --new-window --start-fullscreen "%URL%"
+    start "" "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" --kiosk "%URL%"
     goto next
 )
 if exist "C:\Program Files\Google\Chrome\Application\chrome.exe" (
-    start "" "C:\Program Files\Google\Chrome\Application\chrome.exe" --new-window --start-fullscreen "%URL%"
+    start "" "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk "%URL%"
     goto next
 )
 if exist "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" (
-    start "" "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" --new-window --start-fullscreen "%URL%"
+    start "" "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" --kiosk "%URL%"
     goto next
 )
 if exist "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" (
-    start "" "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --new-window --start-fullscreen "%URL%"
+    start "" "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --kiosk "%URL%"
     goto next
 )
 if exist "C:\Program Files\Microsoft\Edge\Application\msedge.exe" (
-    start "" "C:\Program Files\Microsoft\Edge\Application\msedge.exe" --new-window --start-fullscreen "%URL%"
+    start "" "C:\Program Files\Microsoft\Edge\Application\msedge.exe" --kiosk "%URL%"
     goto next
 )
 if exist "C:\Program Files (x86)\BraveSoftware\Brave-Browser\Application\brave.exe" (
-    start "" "C:\Program Files (x86)\BraveSoftware\Brave-Browser\Application\brave.exe" --new-window --start-fullscreen "%URL%"
+    start "" "C:\Program Files (x86)\BraveSoftware\Brave-Browser\Application\brave.exe" --kiosk "%URL%"
     goto next
 )
 
