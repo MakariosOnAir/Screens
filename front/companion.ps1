@@ -81,8 +81,8 @@ while ($true) {
             if ($currentState -ne $lastState) {
                 $lastState = $currentState
                 
-                # Find all windows containing "الشاشات"
-                $hwnds = [WindowHelper]::FindWindowsByTitle("الشاشات")
+                # Find all windows containing "Display-Screen"
+                $hwnds = [WindowHelper]::FindWindowsByTitle("Display-Screen")
                 
                 if ($hwnds -and $hwnds.Count -gt 0) {
                     foreach ($hwnd in $hwnds) {
@@ -96,7 +96,7 @@ while ($true) {
                         }
                     }
                 } else {
-                    Write-Host "$(Get-Date -Format 'HH:mm:ss') | Warning: Window with title '*الشاشات*' not found." -ForegroundColor DarkYellow
+                    Write-Host "$(Get-Date -Format 'HH:mm:ss') | Warning: Window with title '*Display-Screen*' not found." -ForegroundColor DarkYellow
                 }
             }
         } else {
@@ -105,7 +105,7 @@ while ($true) {
                 $lastState = "inactive"
                 Write-Host "$(Get-Date -Format 'HH:mm:ss') | Timer is INACTIVE. Restoring window..." -ForegroundColor Gray
                 
-                $hwnds = [WindowHelper]::FindWindowsByTitle("الشاشات")
+                $hwnds = [WindowHelper]::FindWindowsByTitle("Display-Screen")
                 if ($hwnds -and $hwnds.Count -gt 0) {
                     foreach ($hwnd in $hwnds) {
                         [WindowHelper]::ShowWindowAsync($hwnd, 3)

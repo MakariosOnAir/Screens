@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>خدمة الشاشات</title>
+    <title>خدمة الشاشات (Display-Screen)</title>
     <link rel="manifest" href="/screens_manifest.json" />
     <link rel="preload" as="image" href="/Untitled-1.png" />
     <link rel="preload" as="image" href="/logo2.png" />
@@ -790,6 +790,9 @@
       /* State-based Layout styling */
       body.maximized-layout #mobile-controls {
         display: flex !important;
+      }
+      body.maximized-layout #panel {
+        display: none !important;
       }
 
       /* Ensure sidebar and layout are correctly displayed in fullscreen mode */
@@ -1579,6 +1582,14 @@
               const idx = list.findIndex(a => a.id === msg.adId);
               if (idx !== -1) {
                 goTo(idx);
+              }
+            }
+            if (msg.type === 'set_fullscreen') {
+              console.log('Socket.io set_fullscreen:', msg);
+              if (msg.active && msg.fullscreen) {
+                document.body.classList.add('maximized-layout');
+              } else {
+                document.body.classList.remove('maximized-layout');
               }
             }
 
