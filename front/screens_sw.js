@@ -1,4 +1,4 @@
-const CACHE_NAME = 'screens-ads-v9';
+const CACHE_NAME = 'screens-ads-v10';
 const ASSETS = [
   '/screens',
   '/index.html',

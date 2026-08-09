@@ -788,15 +788,12 @@
       }
 
       /* State-based Layout styling */
-      body.maximized-layout #panel {
-        display: none !important;
-      }
       body.maximized-layout #mobile-controls {
         display: flex !important;
       }
     </style>
   </head>
-  <body class="maximized-layout">
+  <body>
     <div id="loader">
       <img src="/Untitled-1.png" alt="Logo" style="max-width: 80%; max-height: 50vh; object-fit: contain; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);" />
       <div class="loader-bar"><div class="loader-fill"></div></div>
@@ -1399,7 +1396,15 @@
       }
 
       function toggleFullscreen() {
-        document.body.classList.toggle('maximized-layout');
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(err => {
+            console.error("Error enabling fullscreen:", err);
+          });
+        } else {
+          document.exitFullscreen().catch(err => {
+            console.error("Error exiting fullscreen:", err);
+          });
+        }
       }
 
       // Socket listener moved to connectWebSocket
