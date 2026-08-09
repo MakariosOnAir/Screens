@@ -16,7 +16,7 @@ public class WindowHelper {
 "@
 
 # 2. Get the base domain name (determines current URL dynamically)
-$url = "http://localhost:7860/api/timer/state"
+$url = "https://st-philopateer-screens.fly.dev/api/timer/state"
 $lastState = ""
 
 Clear-Host
