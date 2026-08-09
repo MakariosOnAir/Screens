@@ -1,0 +1,7 @@
+version: 0.1
+endpoints:
+  - name: screens-api
+    port: 7860
+    type: REST
+    networkVisibility: Public
+    context: /
