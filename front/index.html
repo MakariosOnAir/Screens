@@ -791,6 +791,40 @@
       body.maximized-layout #mobile-controls {
         display: flex !important;
       }
+
+      /* Ensure sidebar and layout are correctly displayed in fullscreen mode */
+      :fullscreen body,
+      :-webkit-full-screen body,
+      :-moz-full-screen body,
+      :-ms-fullscreen body {
+        width: 100% !important;
+        height: 100% !important;
+        display: block !important;
+      }
+
+      :fullscreen #app,
+      :-webkit-full-screen #app,
+      :-moz-full-screen #app,
+      :-ms-fullscreen #app {
+        display: flex !important;
+        width: 100vw !important;
+        height: 100vh !important;
+      }
+
+      :fullscreen #panel,
+      :-webkit-full-screen #panel,
+      :-moz-full-screen #panel,
+      :-ms-fullscreen #panel {
+        display: flex !important;
+        width: var(--panel-w) !important;
+      }
+
+      :fullscreen #stage,
+      :-webkit-full-screen #stage,
+      :-moz-full-screen #stage,
+      :-ms-fullscreen #stage {
+        flex: 1 !important;
+      }
     </style>
   </head>
   <body>

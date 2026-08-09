@@ -3,19 +3,53 @@
 # This script monitors the display state and minimizes/maximizes the browser window.
 # ==============================================================================
 
-# 1. Compile User32.dll window controls in memory
-Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-public class WindowHelper {
-    [DllImport("user32.dll")]
-    public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
-    [DllImport("user32.dll")]
-    public static extern bool SetForegroundWindow(IntPtr hWnd);
-}
-"@
+# 1. Compile User32.dll window controls and enumeration in memory if not already loaded
+if ($null -eq ("WindowHelper" -as [type])) {
+    Add-Type @"
+    using System;
+    using System.Collections.Generic;
+    using System.Runtime.InteropServices;
+    using System.Text;
 
-# 2. Get the base domain name (determines current URL dynamically)
+    public class WindowHelper {
+        [DllImport("user32.dll")]
+        public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+        
+        [DllImport("user32.dll")]
+        public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool EnumWindows(EnumCallBackDelegate lpMethod, IntPtr lParam);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern int GetWindowText(IntPtr hWnd, StringBuilder strText, int maxCount);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern int GetWindowTextLength(IntPtr hWnd);
+
+        private delegate bool EnumCallBackDelegate(IntPtr hwnd, IntPtr lParam);
+
+        public static IntPtr[] FindWindowsByTitle(string substring) {
+            List<IntPtr> result = new List<IntPtr>();
+            EnumWindows(new EnumCallBackDelegate((hwnd, lParam) => {
+                int length = GetWindowTextLength(hwnd);
+                if (length > 0) {
+                    StringBuilder sb = new StringBuilder(length + 1);
+                    GetWindowText(hwnd, sb, sb.Capacity);
+                    string title = sb.ToString();
+                    if (title.IndexOf(substring, StringComparison.OrdinalIgnoreCase) >= 0) {
+                        result.Add(hwnd);
+                    }
+                }
+                return true;
+            }), IntPtr.Zero);
+            return result.ToArray();
+        }
+    }
+"@
+}
+
+# 2. Base domain name (determines current URL dynamically)
 $url = "https://st-philopateer-screens.fly.dev/api/timer/state"
 $lastState = ""
 
@@ -23,6 +57,18 @@ Clear-Host
 Write-Host "======================================================" -ForegroundColor Cyan
 Write-Host "     St-Philopateer Screens Companion Script" -ForegroundColor Green
 Write-Host "======================================================" -ForegroundColor Cyan
+
+# Check if local server is running on port 7860
+try {
+    $localTest = Invoke-RestMethod -Uri "http://localhost:7860/api/timer/state" -Method Get -TimeoutSec 2 -ErrorAction SilentlyContinue
+    if ($localTest) {
+        $url = "http://localhost:7860/api/timer/state"
+        Write-Host "Detected local server running on port 7860." -ForegroundColor Green
+    }
+} catch {
+    # Fallback to the default URL
+}
+
 Write-Host "Target URL: $url" -ForegroundColor DarkGray
 Write-Host "Monitoring state change... Press Ctrl+C to exit." -ForegroundColor White
 Write-Host "======================================================" -ForegroundColor Cyan
@@ -35,23 +81,22 @@ while ($true) {
             if ($currentState -ne $lastState) {
                 $lastState = $currentState
                 
-                # Find Chrome, Edge, or Brave processes running the screens page
-                $process = Get-Process -Name "chrome", "msedge", "brave" -ErrorAction SilentlyContinue | 
-                    Where-Object { $_.MainWindowTitle -like "*خدم? الشاشات*" } | 
-                    Select-Object -First 1
+                # Find all windows containing "الشاشات"
+                $hwnds = [WindowHelper]::FindWindowsByTitle("الشاشات")
                 
-                if ($process) {
-                    $hwnd = $process.MainWindowHandle
-                    if ($currentState -eq "minimize") {
-                        Write-Host "$(Get-Date -Format 'HH:mm:ss') | State: MINIMIZE -> Minimizing browser..." -ForegroundColor Yellow
-                        [WindowHelper]::ShowWindowAsync($hwnd, 6) # SW_MINIMIZE (minimizes the window)
-                    } else {
-                        Write-Host "$(Get-Date -Format 'HH:mm:ss') | State: MAXIMIZE -> Restoring and Maximizing..." -ForegroundColor Green
-                        [WindowHelper]::ShowWindowAsync($hwnd, 3) # SW_SHOWMAXIMIZED (maximizes the window)
-                        [WindowHelper]::SetForegroundWindow($hwnd)
+                if ($hwnds -and $hwnds.Count -gt 0) {
+                    foreach ($hwnd in $hwnds) {
+                        if ($currentState -eq "minimize") {
+                            Write-Host "$(Get-Date -Format 'HH:mm:ss') | State: MINIMIZE -> Minimizing browser window ($hwnd)..." -ForegroundColor Yellow
+                            [WindowHelper]::ShowWindowAsync($hwnd, 6) # SW_MINIMIZE (minimizes the window)
+                        } else {
+                            Write-Host "$(Get-Date -Format 'HH:mm:ss') | State: MAXIMIZE -> Restoring and Maximizing ($hwnd)..." -ForegroundColor Green
+                            [WindowHelper]::ShowWindowAsync($hwnd, 3) # SW_SHOWMAXIMIZED (maximizes the window)
+                            [WindowHelper]::SetForegroundWindow($hwnd)
+                        }
                     }
                 } else {
-                    Write-Host "$(Get-Date -Format 'HH:mm:ss') | Warning: Browser with title '*خدمة الشاشات*' not found." -ForegroundColor DarkYellow
+                    Write-Host "$(Get-Date -Format 'HH:mm:ss') | Warning: Window with title '*الشاشات*' not found." -ForegroundColor DarkYellow
                 }
             }
         } else {
@@ -59,13 +104,13 @@ while ($true) {
             if ($lastState -ne "inactive") {
                 $lastState = "inactive"
                 Write-Host "$(Get-Date -Format 'HH:mm:ss') | Timer is INACTIVE. Restoring window..." -ForegroundColor Gray
-                $process = Get-Process -Name "chrome", "msedge", "brave" -ErrorAction SilentlyContinue | 
-                    Where-Object { $_.MainWindowTitle -like "*خدم? الشاشات*" } | 
-                    Select-Object -First 1
-                if ($process) {
-                    $hwnd = $process.MainWindowHandle
-                    [WindowHelper]::ShowWindowAsync($hwnd, 3)
-                    [WindowHelper]::SetForegroundWindow($hwnd)
+                
+                $hwnds = [WindowHelper]::FindWindowsByTitle("الشاشات")
+                if ($hwnds -and $hwnds.Count -gt 0) {
+                    foreach ($hwnd in $hwnds) {
+                        [WindowHelper]::ShowWindowAsync($hwnd, 3)
+                        [WindowHelper]::SetForegroundWindow($hwnd)
+                    }
                 }
             }
         }

@@ -332,12 +332,47 @@ app.get('/screens', (req, res) => {
 });
 
 app.get('/run_screens.txt', (req, res) => {
-  res.sendFile(path.join(__dirname, '../front/run_screens.txt'));
+  const filePath = path.join(__dirname, '../front/run_screens.txt');
+  serveDynamicScript(filePath, 'text/plain', req, res);
+});
+
+app.get('/run_screens.bat', (req, res) => {
+  const filePath = path.join(__dirname, '../front/run_screens.bat');
+  if (fs.existsSync(filePath)) {
+    serveDynamicScript(filePath, 'application/bat', req, res, 'run_screens.bat');
+  } else {
+    const txtPath = path.join(__dirname, '../front/run_screens.txt');
+    serveDynamicScript(txtPath, 'application/bat', req, res, 'run_screens.bat');
+  }
 });
 
 app.get('/companion.ps1', (req, res) => {
-  res.sendFile(path.join(__dirname, '../front/companion.ps1'));
+  const filePath = path.join(__dirname, '../front/companion.ps1');
+  serveDynamicScript(filePath, 'text/plain', req, res);
 });
+
+function serveDynamicScript(filePath, contentType, req, res, downloadFilename) {
+  fs.readFile(filePath, 'utf8', (err, data) => {
+    if (err) {
+      console.error(`Error reading script ${filePath}:`, err);
+      return res.status(500).send('Error reading script file');
+    }
+    const protocol = req.secure || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
+    const host = req.headers.host;
+    
+    // Replace the hardcoded domain with the current host
+    const modifiedData = data.replace(
+      /https:\/\/st-philopateer-screens\.fly\.dev/g,
+      `${protocol}://${host}`
+    );
+    
+    res.setHeader('Content-Type', contentType);
+    if (downloadFilename) {
+      res.setHeader('Content-Disposition', `attachment; filename="${downloadFilename}"`);
+    }
+    res.send(modifiedData);
+  });
+}
 
 // Serve other static files from the front/ directory (disabling default index.html fallback)
 app.use(express.static(path.join(__dirname, '../front'), { index: false }));
