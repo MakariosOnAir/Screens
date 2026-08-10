@@ -1,6 +1,7 @@
 # ==============================================================================
 # Screen Controller Companion Script for Windows
-# This script monitors the display state and minimizes/maximizes the browser window.
+# This script monitors the timer state from Supabase and minimizes/maximizes
+# the browser window accordingly.
 # ==============================================================================
 
 # 1. Compile User32.dll window controls and enumeration in memory if not already loaded
@@ -49,35 +50,43 @@ if ($null -eq ("WindowHelper" -as [type])) {
 "@
 }
 
-# 2. Base domain name (determines current URL dynamically)
-$url = "https://st-philopateer-screens.fly.dev/api/timer/state"
+# 2. Supabase configuration
+$supabaseUrl = "https://zabocfwhfqntmumiahlt.supabase.co"
+$supabaseKey = "sb_publishable_aD0xKcUmcwKfaSS1_Vnmfg_W3ExePcE"
+$apiUrl = "$supabaseUrl/rest/v1/timer_state?id=eq.1&select=*"
+$headers = @{
+    "apikey" = $supabaseKey
+    "Authorization" = "Bearer $supabaseKey"
+}
 $lastState = ""
 
 Clear-Host
 Write-Host "======================================================" -ForegroundColor Cyan
 Write-Host "     St-Philopateer Screens Companion Script" -ForegroundColor Green
 Write-Host "======================================================" -ForegroundColor Cyan
-
-# Check if local server is running on port 7860
-try {
-    $localTest = Invoke-RestMethod -Uri "http://localhost:7860/api/timer/state" -Method Get -TimeoutSec 2 -ErrorAction SilentlyContinue
-    if ($localTest) {
-        $url = "http://localhost:7860/api/timer/state"
-        Write-Host "Detected local server running on port 7860." -ForegroundColor Green
-    }
-} catch {
-    # Fallback to the default URL
-}
-
-Write-Host "Target URL: $url" -ForegroundColor DarkGray
+Write-Host "Data Source: Supabase" -ForegroundColor DarkGray
 Write-Host "Monitoring state change... Press Ctrl+C to exit." -ForegroundColor White
 Write-Host "======================================================" -ForegroundColor Cyan
 
 while ($true) {
     try {
-        $response = Invoke-RestMethod -Uri $url -Method Get -TimeoutSec 5
-        if ($response.active) {
-            $currentState = $response.state
+        $response = Invoke-RestMethod -Uri $apiUrl -Method Get -Headers $headers -TimeoutSec 5
+        $timerData = $response[0]
+
+        if ($timerData.active -and $timerData.startTime) {
+            # Calculate current state from timer data
+            $maxMs = [long]$timerData.maxMins * 60 * 1000
+            $minMs = [long]$timerData.minMins * 60 * 1000
+            $totalCycleMs = $maxMs + $minMs
+            $nowMs = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+            $elapsed = ($nowMs - [long]$timerData.startTime) % $totalCycleMs
+            
+            if ($elapsed -lt $maxMs) {
+                $currentState = "maximize"
+            } else {
+                $currentState = "minimize"
+            }
+
             if ($currentState -ne $lastState) {
                 $lastState = $currentState
                 
@@ -88,10 +97,10 @@ while ($true) {
                     foreach ($hwnd in $hwnds) {
                         if ($currentState -eq "minimize") {
                             Write-Host "$(Get-Date -Format 'HH:mm:ss') | State: MINIMIZE -> Minimizing browser window ($hwnd)..." -ForegroundColor Yellow
-                            [void][WindowHelper]::ShowWindowAsync($hwnd, 6) # SW_MINIMIZE (minimizes the window)
+                            [void][WindowHelper]::ShowWindowAsync($hwnd, 6)
                         } else {
                             Write-Host "$(Get-Date -Format 'HH:mm:ss') | State: MAXIMIZE -> Restoring and Maximizing ($hwnd)..." -ForegroundColor Green
-                            [void][WindowHelper]::ShowWindowAsync($hwnd, 3) # SW_SHOWMAXIMIZED (maximizes the window)
+                            [void][WindowHelper]::ShowWindowAsync($hwnd, 3)
                             [void][WindowHelper]::SetForegroundWindow($hwnd)
                         }
                     }
@@ -115,7 +124,7 @@ while ($true) {
             }
         }
     } catch {
-        Write-Host "$(Get-Date -Format 'HH:mm:ss') | Error connecting to server: $_" -ForegroundColor Red
+        Write-Host "$(Get-Date -Format 'HH:mm:ss') | Error connecting to Supabase: $_" -ForegroundColor Red
     }
     Start-Sleep -Seconds 2
 }

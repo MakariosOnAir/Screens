@@ -988,13 +988,18 @@
         </div>
       </div>
     </div>
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
       // Global error listener to help debug on different devices
       window.onerror = function(message, source, lineno, colno, error) {
         console.error("Global JS Error:", message, "at", source, ":", lineno);
         return false;
       };
+
+      // Initialize Supabase Client
+      const SUPABASE_URL = 'https://zabocfwhfqntmumiahlt.supabase.co';
+      const SUPABASE_KEY = 'sb_publishable_aD0xKcUmcwKfaSS1_Vnmfg_W3ExePcE';
+      const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
       // Service Worker Cleanup: Automatically unregister the old root service worker
       if ('serviceWorker' in navigator) {
@@ -1330,10 +1335,7 @@
         resetTimer(ad);
         updateStatCards(list);
 
-        // Notify server of currently playing ad
-        if (socket && socket.connected) {
-          socket.emit('message', { type: 'playing', adId: ad ? ad.id : null });
-        }
+        // (Supabase mode - no server notification needed)
       }
 
       function startWorkerTimer(dur) {
@@ -1464,15 +1466,11 @@
 
       async function loadFromServer(preserveIndex) {
         try {
-          const res = await fetch('/api/ads');
-          if (res.ok) {
-            const serverAds = await res.json();
-            // Cache in background
-            cacheAdsLocally(serverAds);
-            ADS = serverAds;
-          } else {
-            throw new Error("Server error");
-          }
+          const { data: serverAds, error } = await sb.from('ads').select('*').order('order');
+          if (error) throw error;
+          // Cache in background
+          cacheAdsLocally(serverAds);
+          ADS = serverAds;
         } catch (e) {
           console.error("Failed to load playlist from server, loading offline cache:", e);
           const cached = await getAllItems('cached-ads');
@@ -1564,49 +1562,36 @@
         }
       }
 
-      // Socket.io listener
+      // Supabase Realtime listener
 
-
-      let socket = null;
       function connectWebSocket() {
-        if (typeof io === 'undefined') {
-          console.warn("Socket.io library not loaded yet. Retrying in 2 seconds...");
-          setTimeout(connectWebSocket, 2000);
-          return;
-        }
-        socket = io();
+        console.log('Setting up Supabase Realtime subscriptions...');
 
-        socket.on('connect', () => {
-          console.log('Connected to Socket.io server.');
-          socket.emit('message', { type: 'register', role: 'screen' });
-        });
+        sb.channel('ads-realtime')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'ads' }, (payload) => {
+            console.log('Supabase ads change detected:', payload.eventType);
+            loadFromServer(current);
+          })
+          .subscribe((status) => {
+            console.log('Ads realtime subscription status:', status);
+          });
 
-        socket.on('message', (msg) => {
-          try {
-            if (msg.type === 'reload') {
-              console.log('Socket.io reload triggered.');
-              loadFromServer(current);
+        sb.channel('timer-realtime')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'timer_state' }, (payload) => {
+            console.log('Timer state changed:', payload);
+          })
+          .subscribe();
+
+        sb.channel('screen-control')
+          .on('broadcast', { event: 'force-play' }, (payload) => {
+            console.log('Force play received:', payload);
+            const list = getActiveAds();
+            const idx = list.findIndex(a => String(a.id) === String(payload.adId));
+            if (idx !== -1) {
+              goTo(idx);
             }
-            if (msg.type === 'force-play') {
-              console.log('Socket.io force play trigger:', msg.adId);
-              const list = getActiveAds();
-              const idx = list.findIndex(a => a.id === msg.adId);
-              if (idx !== -1) {
-                goTo(idx);
-              }
-            }
-            if (msg.type === 'set_fullscreen') {
-              console.log('Socket.io set_fullscreen:', msg);
-            }
-
-          } catch (err) {
-            console.error('Error handling Socket.io message:', err);
-          }
-        });
-
-        socket.on('disconnect', () => {
-          console.log('Socket.io connection closed.');
-        });
+          })
+          .subscribe();
       }
 
       window.addEventListener("storage", (e) => {

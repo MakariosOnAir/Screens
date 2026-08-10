@@ -1684,7 +1684,7 @@
 
     <div id="toast"></div>
 
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
       // Global error listener to help debug on different devices
       window.onerror = function(message, source, lineno, colno, error) {
@@ -1694,6 +1694,11 @@
         console.error("Global JS Error:", message, "at", source, ":", lineno);
         return false;
       };
+
+      // Initialize Supabase Client
+      const SUPABASE_URL = 'https://zabocfwhfqntmumiahlt.supabase.co';
+      const SUPABASE_KEY = 'sb_publishable_aD0xKcUmcwKfaSS1_Vnmfg_W3ExePcE';
+      const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
       // Service Worker Cleanup: Automatically unregister the old root service worker
       if ('serviceWorker' in navigator) {
@@ -1791,30 +1796,44 @@
           toast(`🔄 Syncing ${offlineAds.length} offline advertisement(s)...`);
           
           for (const ad of offlineAds) {
-            const formData = new FormData();
-            formData.append("title", ad.title);
-            formData.append("category", ad.category);
-            formData.append("desc", ad.desc);
-            formData.append("duration", ad.duration);
-            formData.append("expiresAt", ad.expiresAt || '');
-            formData.append("active", ad.active);
-            formData.append("muted", ad.muted);
-            formData.append("showDetails", ad.showDetails);
-            formData.append("startTime", ad.startTime || '');
-            formData.append("endTime", ad.endTime || '');
-            formData.append("days", JSON.stringify(ad.days || []));
-            formData.append("media", ad.fileBlob, ad.fileName);
+            try {
+              const adId = 'ad_' + Date.now();
+              const ext = ad.fileName.substring(ad.fileName.lastIndexOf('.'));
+              const cleanName = ad.fileName.replace(/[^a-zA-Z0-9]/g, '_');
+              const filename = Date.now() + '_' + cleanName + ext;
+              
+              const { error: uploadError } = await sb.storage.from('media').upload(filename, ad.fileBlob);
+              if (uploadError) throw uploadError;
+              
+              const { data: urlData } = sb.storage.from('media').getPublicUrl(filename);
+              
+              const newAd = {
+                id: adId,
+                title: ad.title,
+                category: ad.category,
+                desc: ad.desc,
+                src: urlData.publicUrl,
+                type: ad.type,
+                duration: ad.duration,
+                bg: 'ph-1',
+                glowColor: '#6366f1',
+                expiresAt: ad.expiresAt || null,
+                active: ad.active,
+                muted: ad.muted,
+                days: ad.days || [],
+                startTime: ad.startTime || null,
+                endTime: ad.endTime || null,
+                showDetails: ad.showDetails,
+                order: Date.now()
+              };
 
-            const res = await fetch('/api/ads', {
-              method: 'POST',
-              body: formData
-            });
+              const { error: insertError } = await sb.from('ads').insert(newAd);
+              if (insertError) throw insertError;
 
-            if (res.ok) {
               await deleteItem('offline-ads', ad.tempId);
               console.log(`Synced offline ad: ${ad.title}`);
-            } else {
-              console.error(`Failed to sync ad ${ad.title}`);
+            } catch (err) {
+              console.error(`Failed to sync ad ${ad.title}:`, err);
             }
           }
           
@@ -1970,11 +1989,8 @@
         if (ad && ad.duration !== durVal) {
           ad.duration = durVal;
           try {
-            await fetch(`/api/ads/${id}/duration`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ duration: durVal })
-            });
+            const { error } = await sb.from('ads').update({ duration: durVal }).eq('id', id);
+            if (error) throw error;
             updateStats();
           } catch(e) {}
         }
@@ -1982,12 +1998,18 @@
 
       // Force play command
       function forcePlayAd(id) {
-        if (socket && socket.connected) {
-          socket.emit('message', { type: 'force-play', adId: id });
-          toast("▶ Force-play command sent to screens");
-        } else {
-          toast("⚠ Socket.io not connected");
-        }
+        const channel = sb.channel('screen-control');
+        channel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            channel.send({
+              type: 'broadcast',
+              event: 'force-play',
+              payload: { adId: id }
+            }).then(() => {
+              toast("▶ Force-play command sent to screens");
+            });
+          }
+        });
       }
 
       // ── API INTEGRATION ──
@@ -1997,15 +2019,12 @@
         }
         
         try {
-          const res = await fetch('/api/ads');
-          if (res.ok) {
-            ads = await res.json();
-            lastSaved = new Date(); // Update the last update time on load
-            // Cache in IndexedDB for offline viewing
-            await cacheAdsLocally(ads);
-          } else {
-            throw new Error("Server error");
-          }
+          const { data, error } = await sb.from('ads').select('*').order('order');
+          if (error) throw error;
+          ads = data || [];
+          lastSaved = new Date(); // Update the last update time on load
+          // Cache in IndexedDB for offline viewing
+          await cacheAdsLocally(ads);
         } catch (e) {
           console.error("Failed to load ads from server, loading local cache:", e);
           toast("⚠ Operating in Offline Mode");
@@ -2099,9 +2118,9 @@
 
       async function syncTimerStatus() {
         try {
-          const res = await fetch('/api/timer');
-          if (res.ok) {
-            const data = await res.json();
+          const { data, error } = await sb.from('timer_state').select('*').eq('id', 1).single();
+          if (error) throw error;
+          if (data) {
             const btn = document.getElementById('timer-btn-text');
             const badge = document.getElementById('timer-status-badge');
             const maxInput = document.getElementById('input-max-mins');
@@ -2115,7 +2134,7 @@
               }
               if (maxInput) maxInput.value = data.maxMins;
               if (minInput) minInput.value = data.minMins;
-              startLocalCountdown(data.active, data.maxMins, data.minMins, data.startTime, data.serverTime);
+              startLocalCountdown(data.active, data.maxMins, data.minMins, data.startTime, Date.now());
             } else {
               if (btn) btn.textContent = 'Start Timer';
               if (badge) {
@@ -2171,22 +2190,16 @@
 
       async function saveOrder() {
         try {
-          const ids = ads.map(a => a.id);
-          const res = await fetch('/api/ads/reorder', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ids })
-          });
-          if (res.ok) {
-            lastSaved = new Date();
-            updateStats();
-            toast("↕ Order updated");
-          } else {
-            toast("⚠ Failed to save order on server");
+          for (let i = 0; i < ads.length; i++) {
+            const { error } = await sb.from('ads').update({ order: i }).eq('id', ads[i].id);
+            if (error) throw error;
           }
+          lastSaved = new Date();
+          updateStats();
+          toast("↕ Order updated");
         } catch (e) {
           console.error(e);
-          toast("⚠ Error connecting to server");
+          toast("⚠ Error updating order in Supabase");
         }
       }
 
@@ -2401,17 +2414,15 @@
 
       async function toggleActive(id) {
         try {
-          const res = await fetch(`/api/ads/${id}/active`, {
-            method: 'PUT'
-          });
-          if (res.ok) {
-            const ad = ads.find((a) => a.id === id);
-            if (ad) {
-              ad.active = !ad.active;
-              toast(ad.active ? "✅ Ad enabled" : "⏸ Ad disabled");
-              render();
-              updateStats();
-            }
+          const ad = ads.find((a) => a.id === id);
+          if (ad) {
+            const newActive = !ad.active;
+            const { error } = await sb.from('ads').update({ active: newActive }).eq('id', id);
+            if (error) throw error;
+            ad.active = newActive;
+            toast(ad.active ? "✅ Ad enabled" : "⏸ Ad disabled");
+            render();
+            updateStats();
           }
         } catch (e) {
           toast("⚠ Connection error");
@@ -2421,16 +2432,11 @@
       async function updateDuration(id, val) {
         const durationVal = Math.max(3, Math.min(120, Number(val)));
         try {
-          const res = await fetch(`/api/ads/${id}/duration`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ duration: durationVal })
-          });
-          if (res.ok) {
-            const ad = ads.find((a) => a.id === id);
-            if (ad) ad.duration = durationVal;
-            updateStats();
-          }
+          const { error } = await sb.from('ads').update({ duration: durationVal }).eq('id', id);
+          if (error) throw error;
+          const ad = ads.find((a) => a.id === id);
+          if (ad) ad.duration = durationVal;
+          updateStats();
         } catch (e) {
           toast("⚠ Failed to update duration");
         }
@@ -2691,17 +2697,18 @@
 
       async function doDelete() {
         try {
-          const res = await fetch(`/api/ads/${deleteId}`, {
-            method: 'DELETE'
-          });
-          if (res.ok) {
-            toast("🗑 Advertisement deleted");
-            closeModal();
-            load();
-          } else {
-            toast("⚠ Failed to delete");
+          const ad = ads.find(a => a.id === deleteId);
+          if (ad && ad.src && ad.src.includes('supabase.co')) {
+            const filename = ad.src.substring(ad.src.lastIndexOf('/') + 1);
+            await sb.storage.from('media').remove([filename]);
           }
+          const { error } = await sb.from('ads').delete().eq('id', deleteId);
+          if (error) throw error;
+          toast("🗑 Advertisement deleted");
+          closeModal();
+          load();
         } catch (e) {
+          console.error(e);
           toast("⚠ Connection error");
         }
       }
@@ -2751,25 +2758,84 @@
             throw new Error("Offline");
           }
 
-          let url = '/api/ads';
-          let method = 'POST';
-          if (modalMode === 'edit') {
-            url = `/api/ads/${editId}`;
-            method = 'PUT';
-          }
+          if (modalMode === 'add') {
+            const adId = 'ad_' + Date.now();
+            const ext = pendingMedia.fileName.substring(pendingMedia.fileName.lastIndexOf('.'));
+            const cleanName = pendingMedia.fileName.replace(/[^a-zA-Z0-9]/g, '_');
+            const filename = Date.now() + '_' + cleanName + ext;
+            
+            const { error: uploadError } = await sb.storage.from('media').upload(filename, pendingMedia.file);
+            if (uploadError) throw uploadError;
+            
+            const { data: urlData } = sb.storage.from('media').getPublicUrl(filename);
+            
+            const newAd = {
+              id: adId,
+              title,
+              category,
+              desc,
+              src: urlData.publicUrl,
+              type: pendingMedia.type,
+              duration: parseInt(duration) || 10,
+              bg: 'ph-1',
+              glowColor: '#6366f1',
+              expiresAt: expiresAt || null,
+              active: active === 'true',
+              muted: isMuted,
+              days: selectedDays,
+              startTime: startTime || null,
+              endTime: endTime || null,
+              showDetails: showDetails,
+              order: Date.now()
+            };
 
-          const res = await fetch(url, {
-            method: method,
-            body: formData
-          });
+            const { error: insertError } = await sb.from('ads').insert(newAd);
+            if (insertError) throw insertError;
 
-          if (res.ok) {
-            toast(modalMode === 'edit' ? "✏️ Advertisement updated" : "✅ Advertisement added");
+            toast("✅ Advertisement added");
             closeModal();
             load();
-          } else {
-            const errData = await res.json();
-            toast(`⚠ Save failed: ${errData.error || 'Server error'}`);
+          } else if (modalMode === 'edit') {
+            const adUpdate = {
+              title,
+              category,
+              desc,
+              duration: parseInt(duration) || 10,
+              expiresAt: expiresAt || null,
+              active: active === 'true',
+              muted: isMuted,
+              days: selectedDays,
+              startTime: startTime || null,
+              endTime: endTime || null,
+              showDetails: showDetails
+            };
+
+            if (pendingMedia && pendingMedia.file) {
+              const ext = pendingMedia.fileName.substring(pendingMedia.fileName.lastIndexOf('.'));
+              const cleanName = pendingMedia.fileName.replace(/[^a-zA-Z0-9]/g, '_');
+              const filename = Date.now() + '_' + cleanName + ext;
+              
+              const { error: uploadError } = await sb.storage.from('media').upload(filename, pendingMedia.file);
+              if (uploadError) throw uploadError;
+              
+              const { data: urlData } = sb.storage.from('media').getPublicUrl(filename);
+              adUpdate.src = urlData.publicUrl;
+              adUpdate.type = pendingMedia.type;
+
+              // Try to remove old media
+              const oldAd = ads.find(a => a.id === editId);
+              if (oldAd && oldAd.src && oldAd.src.includes('supabase.co')) {
+                const oldFilename = oldAd.src.substring(oldAd.src.lastIndexOf('/') + 1);
+                await sb.storage.from('media').remove([oldFilename]);
+              }
+            }
+
+            const { error: updateError } = await sb.from('ads').update(adUpdate).eq('id', editId);
+            if (updateError) throw updateError;
+
+            toast("✏️ Advertisement updated");
+            closeModal();
+            load();
           }
         } catch (e) {
           console.error(e);
@@ -2804,7 +2870,7 @@
               toast("⚠ Failed to save locally");
             }
           } else {
-            toast("⚠ Connection error to server");
+            toast("⚠ Connection error to Supabase");
           }
         } finally {
           saveBtn.disabled = false;
@@ -2887,39 +2953,23 @@
         });
       }
 
-      // Socket.io listener
-      let socket = null;
+      // Supabase Realtime subscriptions
       function connectWebSocket() {
-        if (typeof io === 'undefined') {
-          console.warn("Socket.io library not loaded yet. Retrying in 2 seconds...");
-          setTimeout(connectWebSocket, 2000);
-          return;
-        }
-        socket = io();
+        console.log('Setting up Supabase Realtime subscriptions...');
 
-        socket.on('connect', () => {
-          console.log('Connected to Socket.io server.');
-          socket.emit('message', { type: 'register', role: 'admin' });
-        });
+        sb.channel('ads-realtime')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'ads' }, (payload) => {
+            console.log('Supabase ads change detected:', payload.eventType);
+            load();
+          })
+          .subscribe();
 
-        socket.on('message', (msg) => {
-          try {
-            if (msg.type === 'reload') {
-              console.log('Socket.io reload triggered.');
-              load();
-            }
-            if (msg.type === 'playing') {
-              console.log('Socket.io playing update:', msg.adId);
-              updatePlayingHighlight(msg.adId);
-            }
-          } catch (err) {
-            console.error('Error handling Socket.io message:', err);
-          }
-        });
-
-        socket.on('disconnect', () => {
-          console.log('Socket.io connection closed.');
-        });
+        sb.channel('timer-realtime')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'timer_state' }, (payload) => {
+            console.log('Supabase timer state changed:', payload.eventType);
+            syncTimerStatus();
+          })
+          .subscribe();
       }
 
       window.addEventListener("storage", (e) => {
@@ -2998,41 +3048,39 @@ function toggleScreenTimer() {
       toast("⚠ Please enter valid durations greater than 0");
       return;
     }
-    fetch('/api/timer', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ maxMins, minMins })
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.success) {
-        btn.textContent = 'Stop Timer';
-        badge.style.background = "rgba(34,197,94,0.15)";
-        badge.style.color = "var(--green)";
-        badge.textContent = "Status: Active";
-        toast("⏱ Timer started (server-managed)");
-        syncTimerStatus();
-      } else {
-        toast(`⚠ ${data.error || 'Failed to start timer'}`);
-      }
-    })
-    .catch(() => toast('⚠ Network error'));
+    sb.from('timer_state')
+      .update({ active: true, maxMins, minMins, startTime: Date.now() })
+      .eq('id', 1)
+      .then(({ error }) => {
+        if (error) {
+          toast(`⚠ Failed to start timer: ${error.message}`);
+        } else {
+          btn.textContent = 'Stop Timer';
+          badge.style.background = "rgba(34,197,94,0.15)";
+          badge.style.color = "var(--green)";
+          badge.textContent = "Status: Active";
+          toast("⏱ Timer started");
+          syncTimerStatus();
+        }
+      })
+      .catch(() => toast('⚠ Network error'));
   } else {
-    fetch('/api/timer/stop', { method: 'POST' })
-    .then(r => r.json())
-    .then(data => {
-      if (data.success) {
-        btn.textContent = 'Start Timer';
-        badge.style.background = "rgba(100,116,139,0.2)";
-        badge.style.color = "var(--text-sm)";
-        badge.textContent = "Status: Inactive";
-        toast("⏹ Timer stopped (server-managed)");
-        syncTimerStatus();
-      } else {
-        toast(`⚠ ${data.error || 'Failed to stop timer'}`);
-      }
-    })
-    .catch(() => toast('⚠ Network error'));
+    sb.from('timer_state')
+      .update({ active: false, startTime: null })
+      .eq('id', 1)
+      .then(({ error }) => {
+        if (error) {
+          toast(`⚠ Failed to stop timer: ${error.message}`);
+        } else {
+          btn.textContent = 'Start Timer';
+          badge.style.background = "rgba(100,116,139,0.2)";
+          badge.style.color = "var(--text-sm)";
+          badge.textContent = "Status: Inactive";
+          toast("⏹ Timer stopped");
+          syncTimerStatus();
+        }
+      })
+      .catch(() => toast('⚠ Network error'));
   }
 }
 

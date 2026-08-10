@@ -2,7 +2,8 @@
 title St-Philopateer Screens Launcher
 
 echo Opening screens display in kiosk fullscreen mode...
-set "URL=https://st-philopateer-screens.fly.dev/screens"
+:: CHANGEME: Put your Netlify URL here
+set "URL=YOUR_NETLIFY_URL"
 
 if exist "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" (
     start "" "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" --kiosk --user-data-dir="%TEMP%\BraveKioskProfile" "%URL%"
@@ -34,17 +35,17 @@ start "" "%URL%"
 
 :next
 echo Preparing companion script...
-powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://st-philopateer-screens.fly.dev/companion.ps1' -OutFile '%TEMP%\companion.ps1'"
+set "SCRIPT_PATH=%~dp0companion.ps1"
 
-if not exist "%TEMP%\companion.ps1" goto error
+if not exist "%SCRIPT_PATH%" goto error
 
 echo Set WshShell = CreateObject("WScript.Shell") > "%TEMP%\launch.vbs"
-echo WshShell.Run "powershell -ExecutionPolicy Bypass -File ""%TEMP%\companion.ps1""", 0, false >> "%TEMP%\launch.vbs"
+echo WshShell.Run "powershell -ExecutionPolicy Bypass -File ""%SCRIPT_PATH%""", 0, false >> "%TEMP%\launch.vbs"
 wscript "%TEMP%\launch.vbs"
 del "%TEMP%\launch.vbs"
 exit
 
 :error
-echo Error: Failed to download companion script. Please check your internet connection.
+echo Error: companion.ps1 not found in the same folder as this launcher.
 pause
 exit
