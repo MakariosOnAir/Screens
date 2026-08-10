@@ -2,7 +2,7 @@
 title St-Philopateer Screens Launcher
 
 echo Opening screens display in kiosk fullscreen mode...
-set "URL=https://makariosonair.github.io/Screens/front/index.html"
+set "URL=https://st-philopateer.github.io/Screens/front/index.html"
 
 if exist "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" (
     start "" "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" --kiosk --user-data-dir="%TEMP%\BraveKioskProfile" "%URL%"
@@ -34,7 +34,7 @@ start "" "%URL%"
 
 :next
 echo Preparing companion script...
-powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://makariosonair.github.io/Screens/front/companion.ps1' -OutFile '%TEMP%\companion.ps1'"
+powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://st-philopateer.github.io/Screens/front/companion.ps1' -OutFile '%TEMP%\companion.ps1'"
 
 if not exist "%TEMP%\companion.ps1" goto error
 
