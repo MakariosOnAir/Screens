@@ -3,7 +3,7 @@ title St-Philopateer Screens Launcher
 
 echo Opening screens display in kiosk fullscreen mode...
 :: CHANGEME: Put your Netlify URL here
-set "URL=YOUR_NETLIFY_URL"
+set "URL=https://makariosonair.github.io/Screens/front/index.html"
 
 if exist "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" (
     start "" "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe" --kiosk --user-data-dir="%TEMP%\BraveKioskProfile" "%URL%"
