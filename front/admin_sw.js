@@ -1,9 +1,9 @@
 const CACHE_NAME = 'admin-ads-v1';
 const ASSETS = [
-  '/admin',
-  '/admin.html',
-  '/admin_manifest.json',
-  '/Untitled-1.png'
+  './',
+  'admin.html',
+  'admin_manifest.json',
+  'logo.png'
 ];
 
 self.addEventListener('install', (e) => {
@@ -50,8 +50,8 @@ self.addEventListener('fetch', (e) => {
       .catch(() => {
         return caches.match(e.request).then((matching) => {
           if (matching) return matching;
-          if (url.pathname === '/admin') {
-            return caches.match('/admin.html');
+          if (url.pathname.endsWith('/admin') || url.pathname.endsWith('/admin.html')) {
+            return caches.match('admin.html');
           }
         });
       })

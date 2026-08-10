@@ -1,9 +1,9 @@
 const CACHE_NAME = 'screens-ads-v10';
 const ASSETS = [
-  '/screens',
-  '/index.html',
-  '/screens_manifest.json',
-  '/Untitled-1.png'
+  './',
+  'index.html',
+  'screens_manifest.json',
+  'logo.png'
 ];
 
 self.addEventListener('install', (e) => {
@@ -50,8 +50,8 @@ self.addEventListener('fetch', (e) => {
       .catch(() => {
         return caches.match(e.request).then((matching) => {
           if (matching) return matching;
-          if (url.pathname === '/screens') {
-            return caches.match('/index.html');
+          if (url.pathname.endsWith('/screens') || url.pathname.endsWith('/index.html') || url.pathname === '/') {
+            return caches.match('index.html');
           }
         });
       })
