@@ -2276,19 +2276,15 @@
 
       async function saveOrder() {
         try {
-          const promises = ads.map((ad, i) => 
-            sb.from('ads').update({ order: i }).eq('id', ad.id)
-          );
-          const results = await Promise.all(promises);
-          for (const res of results) {
-            if (res.error) throw res.error;
-          }
+          const orderData = ads.map((ad, i) => ({ id: ad.id, order: i }));
+          const { error } = await sb.rpc('update_ad_orders_custom', { orders: orderData });
+          if (error) throw error;
           lastSaved = new Date();
           updateStats();
           toast("↕ Order updated");
         } catch (e) {
           console.error(e);
-          toast("⚠ Error updating order in Supabase");
+          toast("⚠ Error updating order in Supabase: " + (e.message || e));
         }
       }
 
@@ -2506,7 +2502,7 @@
           const ad = ads.find((a) => a.id === id);
           if (ad) {
             const newActive = !ad.active;
-            const { error } = await sb.from('ads').update({ active: newActive }).eq('id', id);
+            const { error } = await sb.rpc('update_ad_custom', { ad_id: id, ad_fields: { active: newActive } });
             if (error) throw error;
             ad.active = newActive;
             toast(ad.active ? "✅ Ad enabled" : "⏸ Ad disabled");
@@ -2521,13 +2517,13 @@
       async function updateDuration(id, val) {
         const durationVal = Math.max(3, Math.min(120, Number(val)));
         try {
-          const { error } = await sb.from('ads').update({ duration: durationVal }).eq('id', id);
+          const { error } = await sb.rpc('update_ad_custom', { ad_id: id, ad_fields: { duration: durationVal } });
           if (error) throw error;
           const ad = ads.find((a) => a.id === id);
           if (ad) ad.duration = durationVal;
           updateStats();
         } catch (e) {
-          toast("⚠ Failed to update duration");
+          toast("⚠ Failed to update duration: " + (e.message || e));
         }
       }
 
@@ -2796,7 +2792,7 @@
             const filename = deletedAd.src.substring(deletedAd.src.lastIndexOf('/') + 1);
             sb.storage.from('media').remove([filename]).catch(err => console.error("Storage delete error:", err));
           }
-          const { error } = await sb.from('ads').delete().eq('id', idToDelete);
+          const { error } = await sb.rpc('delete_ad_custom', { ad_id: idToDelete });
           if (error) throw error;
           toast("🗑 Deleted successfully from database");
         } catch (e) {
@@ -2958,7 +2954,7 @@
               updateStats();
               toast("✏️ Saving updates...");
               
-              sb.from('ads').update(adUpdate).eq('id', editId).then(({ error }) => {
+              sb.rpc('update_ad_custom', { ad_id: editId, ad_fields: adUpdate }).then(({ error }) => {
                 if (error) {
                   console.error("Background update failed:", error);
                   toast("❌ Failed to save updates on server: " + error.message);
@@ -2988,7 +2984,7 @@
                 await sb.storage.from('media').remove([oldFilename]);
               }
 
-            const { error: updateError } = await sb.from('ads').update(adUpdate).eq('id', editId);
+            const { error: updateError } = await sb.rpc('update_ad_custom', { ad_id: editId, ad_fields: adUpdate });
             if (updateError) throw updateError;
 
             toast("✏️ Advertisement updated");
