@@ -1638,7 +1638,19 @@
             console.log('Ads realtime subscription status:', status);
           });
 
-        nowPlayingChannel = sb.channel('now-playing-channel');
+        nowPlayingChannel = sb.channel('now-playing-channel')
+          .on('broadcast', { event: 'requestCurrentAd' }, () => {
+            console.log('Admin requested current playing ad, sending response...');
+            const list = getActiveAds();
+            if (list.length > 0 && current < list.length) {
+              const activeAd = list[current];
+              nowPlayingChannel.send({
+                type: 'broadcast',
+                event: 'nowPlaying',
+                payload: { adId: activeAd.id }
+              });
+            }
+          });
         nowPlayingChannel.subscribe();
 
         sb.channel('timer-realtime')

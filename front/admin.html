@@ -3129,14 +3129,22 @@
           })
           .subscribe();
 
-        sb.channel('now-playing-channel')
+        const nowPlayingChan = sb.channel('now-playing-channel')
           .on('broadcast', { event: 'nowPlaying' }, (payload) => {
             console.log('Now playing ad changed:', payload);
             if (payload && payload.payload) {
               updatePlayingHighlight(payload.payload.adId);
             }
           })
-          .subscribe();
+          .subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+              nowPlayingChan.send({
+                type: 'broadcast',
+                event: 'requestCurrentAd',
+                payload: {}
+              });
+            }
+          });
       }
 
       window.addEventListener("storage", (e) => {
