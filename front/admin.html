@@ -2276,9 +2276,12 @@
 
       async function saveOrder() {
         try {
-          for (let i = 0; i < ads.length; i++) {
-            const { error } = await sb.from('ads').update({ order: i }).eq('id', ads[i].id);
-            if (error) throw error;
+          const promises = ads.map((ad, i) => 
+            sb.from('ads').update({ order: i }).eq('id', ad.id)
+          );
+          const results = await Promise.all(promises);
+          for (const res of results) {
+            if (res.error) throw res.error;
           }
           lastSaved = new Date();
           updateStats();
@@ -2776,20 +2779,34 @@
       }
 
       async function doDelete() {
+        const idToDelete = deleteId;
+        const deletedAdIndex = ads.findIndex(a => a.id === idToDelete);
+        let deletedAd = null;
+        if (deletedAdIndex > -1) {
+          deletedAd = ads[deletedAdIndex];
+          ads.splice(deletedAdIndex, 1);
+        }
+        closeModal();
+        render();
+        updateStats();
+        toast("🗑 Deleting advertisement...");
+
         try {
-          const ad = ads.find(a => a.id === deleteId);
-          if (ad && ad.src && ad.src.includes('supabase.co')) {
-            const filename = ad.src.substring(ad.src.lastIndexOf('/') + 1);
-            await sb.storage.from('media').remove([filename]);
+          if (deletedAd && deletedAd.src && deletedAd.src.includes('supabase.co')) {
+            const filename = deletedAd.src.substring(deletedAd.src.lastIndexOf('/') + 1);
+            sb.storage.from('media').remove([filename]).catch(err => console.error("Storage delete error:", err));
           }
-          const { error } = await sb.from('ads').delete().eq('id', deleteId);
+          const { error } = await sb.from('ads').delete().eq('id', idToDelete);
           if (error) throw error;
-          toast("🗑 Advertisement deleted");
-          closeModal();
-          load();
+          toast("🗑 Deleted successfully from database");
         } catch (e) {
-          console.error(e);
-          toast("⚠ Connection error");
+          console.error("Failed to delete ad on Supabase, restoring UI:", e);
+          toast("❌ Failed to delete from server. Restored.");
+          if (deletedAd) {
+            ads.push(deletedAd);
+            render();
+            updateStats();
+          }
         }
       }
 
@@ -2929,7 +2946,29 @@
               showDetails: showDetails
             };
 
-            if (pendingMedia && pendingMedia.file) {
+            const hasNewFile = pendingMedia && pendingMedia.file;
+
+            if (!hasNewFile) {
+              const localAd = ads.find(a => a.id === editId);
+              if (localAd) {
+                Object.assign(localAd, adUpdate);
+              }
+              closeModal();
+              render();
+              updateStats();
+              toast("✏️ Saving updates...");
+              
+              sb.from('ads').update(adUpdate).eq('id', editId).then(({ error }) => {
+                if (error) {
+                  console.error("Background update failed:", error);
+                  toast("❌ Failed to save updates on server");
+                  load();
+                } else {
+                  toast("✏️ Updates saved successfully");
+                }
+              });
+              return;
+            }
               const ext = pendingMedia.fileName.substring(pendingMedia.fileName.lastIndexOf('.'));
               const cleanName = pendingMedia.fileName.replace(/[^a-zA-Z0-9]/g, '_');
               const filename = Date.now() + '_' + cleanName + ext;
