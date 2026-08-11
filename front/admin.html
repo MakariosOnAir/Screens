@@ -2514,7 +2514,7 @@
             updateStats();
           }
         } catch (e) {
-          toast("⚠ Connection error");
+          toast("⚠ Connection error: " + (e.message || e));
         }
       }
 
@@ -2801,7 +2801,7 @@
           toast("🗑 Deleted successfully from database");
         } catch (e) {
           console.error("Failed to delete ad on Supabase, restoring UI:", e);
-          toast("❌ Failed to delete from server. Restored.");
+          toast("❌ Failed to delete from server: " + (e.message || e));
           if (deletedAd) {
             ads.push(deletedAd);
             render();
@@ -2961,7 +2961,7 @@
               sb.from('ads').update(adUpdate).eq('id', editId).then(({ error }) => {
                 if (error) {
                   console.error("Background update failed:", error);
-                  toast("❌ Failed to save updates on server");
+                  toast("❌ Failed to save updates on server: " + error.message);
                   load();
                 } else {
                   toast("✏️ Updates saved successfully");
@@ -3032,7 +3032,7 @@
               toast("⚠ Failed to save locally");
             }
           } else {
-            toast("⚠ Connection error to Supabase");
+            toast("⚠ Connection error to Supabase: " + (e.message || e));
           }
         } finally {
           saveBtn.disabled = false;
