@@ -1357,12 +1357,12 @@
               <div style="display: flex; flex-direction: column; gap: 16px;">
                 <div class="form-group" style="margin-bottom: 0;">
                   <label class="form-label">Maximize Duration (Minutes)</label>
-                  <input type="number" id="input-max-mins" class="form-input" value="5" min="0.1" step="0.5" />
+                  <input type="number" id="input-max-mins" class="form-input" placeholder="مثال: 5" min="0.1" step="0.5" />
                   <div class="form-hint">Time in minutes the display remains maximized in fullscreen.</div>
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
                   <label class="form-label">Minimize Duration (Minutes)</label>
-                  <input type="number" id="input-min-mins" class="form-input" value="2" min="0.1" step="0.5" />
+                  <input type="number" id="input-min-mins" class="form-input" placeholder="مثال: 2" min="0.1" step="0.5" />
                   <div class="form-hint">Time in minutes the display remains minimized after maximize.</div>
                 </div>
                 <div style="margin-top: 10px;">
@@ -1424,19 +1424,24 @@
               <span style="font-size: 12px; color: var(--text-xs)"
                 >Drag to reorder</span
               >
-              <button class="btn btn-ghost btn-sm" onclick="load()">
-                <svg
-                  width="13"
-                  height="13"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                >
-                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
-                </svg>
-                Refresh
-              </button>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-ghost btn-sm" onclick="clearOfflineQueue()" style="color: var(--red); border-color: rgba(239, 68, 68, 0.2);">
+                  🧹 مسح المعلق أوفلاين
+                </button>
+                <button class="btn btn-ghost btn-sm" onclick="load()">
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                  >
+                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                  </svg>
+                  Refresh
+                </button>
+              </div>
             </div>
             <div id="playlist-list"></div>
           </div>
@@ -1722,7 +1727,9 @@
       const DB_NAME = 'OnAirDB';
       const DB_VERSION = 1;
 
+      let cachedDB = null;
       function openDB() {
+        if (cachedDB) return Promise.resolve(cachedDB);
         return new Promise((resolve, reject) => {
           const request = indexedDB.open(DB_NAME, DB_VERSION);
           request.onupgradeneeded = (e) => {
@@ -1734,7 +1741,10 @@
               db.createObjectStore('offline-ads', { keyPath: 'tempId' });
             }
           };
-          request.onsuccess = (e) => resolve(e.target.result);
+          request.onsuccess = (e) => {
+            cachedDB = e.target.result;
+            resolve(cachedDB);
+          };
           request.onerror = (e) => reject(e.target.error);
         });
       }
@@ -1834,6 +1844,10 @@
               console.log(`Synced offline ad: ${ad.title}`);
             } catch (err) {
               console.error(`Failed to sync ad ${ad.title}:`, err);
+              if (err.message && (err.message.includes('exceeds') || err.message.includes('size') || err.status === 413)) {
+                toast(`⚠ فشل مزامنة "${ad.title}": حجم الملف أكبر من 50 ميجا.`);
+                await deleteItem('offline-ads', ad.tempId); // Clear it from queue to prevent infinite spams
+              }
             }
           }
           
@@ -1843,6 +1857,14 @@
           console.error("Sync error:", err);
         } finally {
           isSyncing = false;
+        }
+      }
+
+      async function clearOfflineQueue() {
+        if (confirm("هل أنت متأكد من مسح قائمة الإعلانات المعلقة أوفلاين؟")) {
+          await clearStore('offline-ads');
+          toast("🧹 تم مسح الإعلانات المعلقة أوفلاين");
+          load();
         }
       }
 
@@ -2834,6 +2856,10 @@
           }
         } catch (e) {
           console.error(e);
+          if (e.message && (e.message.includes('exceeds') || e.message.includes('size') || e.status === 413)) {
+            alert("⚠ فشل الرفع: حجم الملف أكبر من 50 ميجا! يرجى ضغط الفيديو أو اختيار ملف أصغر.");
+            return;
+          }
           if (modalMode === 'add' && pendingMedia && pendingMedia.file) {
             try {
               const tempId = 'offline_' + Date.now();

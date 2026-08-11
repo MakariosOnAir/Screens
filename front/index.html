@@ -903,21 +903,7 @@
             </div>
           </div>
           <div class="panel-controls">
-            <button class="ctrl-btn" id="btn-install" title="Install App" style="display: none;">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-            </button>
-            <button class="ctrl-btn" id="btn-theme" title="Toggle Theme">
+            <button class="ctrl-btn" id="btn-theme" title="تغيير المظهر">
               <svg
                 id="theme-icon"
                 width="14"
@@ -938,7 +924,7 @@
                 <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
               </svg>
             </button>
-            <button id="btn-fullscreen" class="ctrl-btn" title="Fullscreen">
+            <button id="btn-fullscreen" class="ctrl-btn" title="ملء الشاشة">
               <svg
                 width="14"
                 height="14"
@@ -956,27 +942,27 @@
         </div>
 
         <div class="panel-stats">
-          <div class="stat-mini" title="Total Ads">
+          <div class="stat-mini" title="إجمالي الإعلانات">
             <div class="stat-mini-icon">📋</div>
             <div class="stat-mini-value" id="stat-total">0</div>
-            <div class="stat-mini-label">Total</div>
+            <div class="stat-mini-label">الإجمالي</div>
           </div>
-          <div class="stat-mini" title="Currently Playing">
+          <div class="stat-mini" title="يعرض حالياً">
             <div class="stat-mini-icon">▶️</div>
             <div class="stat-mini-value" id="stat-playing-num">—</div>
-            <div class="stat-mini-label">Playing</div>
+            <div class="stat-mini-label">يعرض الآن</div>
           </div>
-          <div class="stat-mini" title="Playlist Duration">
+          <div class="stat-mini" title="مدة الدورة الكاملة">
             <div class="stat-mini-icon">⏱</div>
-            <div class="stat-mini-value" id="stat-duration">0s</div>
-            <div class="stat-mini-label">Loop</div>
+            <div class="stat-mini-value" id="stat-duration">0 ثانية</div>
+            <div class="stat-mini-label">دورة التشغيل</div>
           </div>
         </div>
 
         <div class="panel-header">
-          <h3>Playlist</h3>
+          <h3>قائمة التشغيل</h3>
           <div class="panel-counter">
-            Ad <span id="panel-current">1</span> /
+            الإعلان <span id="panel-current">1</span> /
             <span id="panel-total">0</span>
           </div>
         </div>
@@ -1023,7 +1009,9 @@
       const DB_NAME = 'OnAirDB';
       const DB_VERSION = 1;
 
+      let cachedDB = null;
       function openDB() {
+        if (cachedDB) return Promise.resolve(cachedDB);
         return new Promise((resolve, reject) => {
           const request = indexedDB.open(DB_NAME, DB_VERSION);
           request.onupgradeneeded = (e) => {
@@ -1035,7 +1023,10 @@
               db.createObjectStore('offline-ads', { keyPath: 'tempId' });
             }
           };
-          request.onsuccess = (e) => resolve(e.target.result);
+          request.onsuccess = (e) => {
+            cachedDB = e.target.result;
+            resolve(cachedDB);
+          };
           request.onerror = (e) => reject(e.target.error);
         });
       }
@@ -1236,13 +1227,14 @@
                     : `<img src="${mediaUrl}" alt="">`
                   : `<div class="panel-thumb-placeholder">🖼</div>`
               }
-              ${hasSrc ? `<div class="media-type-badge">${isVideo ? "Video" : "Image"}</div>` : ""}
+              ${hasSrc ? `<div class="media-type-badge">${isVideo ? "فيديو" : "صورة"}</div>` : ""}
               ${isPlaying ? `<div class="playing-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg></div>` : ""}
             </div>
             <div class="panel-info">
-              <div class="panel-title">${ad.title || "Advertisement " + (i + 1)}</div>
+              <div class="panel-title">${ad.title || "إعلان " + (i + 1)}</div>
+              <div class="panel-info-sub" style="display:none;"></div>
               <div class="panel-meta">
-                ${isPlaying ? '<span class="now-badge">Now Playing</span>' : `<span class="duration-badge">⏱ ${isVideo ? "Video" : (ad.duration || 10) + "s"}</span>`}
+                ${isPlaying ? '<span class="now-badge">يعرض الآن</span>' : `<span class="duration-badge">⏱ ${isVideo ? "فيديو" : (ad.duration || 10) + " ثانية"}</span>`}
               </div>
             </div>
           `;
@@ -1261,7 +1253,7 @@
           (s, a) => s + (a.type === "video" ? 0 : Number(a.duration || 10)),
           0,
         );
-        durEl.textContent = dur + "s";
+        durEl.textContent = dur + " ثانية";
         if (list.length) {
           playingEl.textContent = current + 1 + "/" + list.length;
         } else {
@@ -1315,10 +1307,10 @@
               b.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>`;
               t.appendChild(b);
             }
-            meta.innerHTML = '<span class="now-badge">Now Playing</span>';
+            meta.innerHTML = '<span class="now-badge">يعرض الآن</span>';
           } else {
             if (badge) badge.remove();
-            meta.innerHTML = `<span class="duration-badge">⏱ ${ad.type === "video" ? "Video" : (ad.duration || 10) + "s"}</span>`;
+            meta.innerHTML = `<span class="duration-badge">⏱ ${ad.type === "video" ? "فيديو" : (ad.duration || 10) + " ثانية"}</span>`;
           }
         });
         document.getElementById("panel-current").textContent = current + 1;
