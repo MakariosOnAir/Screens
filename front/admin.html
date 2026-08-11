@@ -1718,74 +1718,144 @@
         });
       }
 
-      // ── INDEXEDDB SETUP ──
+      // ── INDEXEDDB SETUP WITH MEMORY FALLBACK ──
       const DB_NAME = 'OnAirDB';
       const DB_VERSION = 1;
 
       let cachedDB = null;
+      let isDBFailed = false;
+      let memoryOfflineStore = [];
+      let memoryCachedStore = [];
+
       function openDB() {
+        if (isDBFailed) return Promise.reject(new Error("IndexedDB is disabled"));
         if (cachedDB) return Promise.resolve(cachedDB);
         return new Promise((resolve, reject) => {
-          const request = indexedDB.open(DB_NAME, DB_VERSION);
-          request.onupgradeneeded = (e) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains('cached-ads')) {
-              db.createObjectStore('cached-ads', { keyPath: 'id' });
-            }
-            if (!db.objectStoreNames.contains('offline-ads')) {
-              db.createObjectStore('offline-ads', { keyPath: 'tempId' });
-            }
-          };
-          request.onsuccess = (e) => {
-            cachedDB = e.target.result;
-            resolve(cachedDB);
-          };
-          request.onerror = (e) => reject(e.target.error);
+          try {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+            
+            const timeoutId = setTimeout(() => {
+              isDBFailed = true;
+              reject(new Error("IndexedDB open timed out"));
+            }, 1500);
+
+            request.onblocked = () => {
+              clearTimeout(timeoutId);
+              isDBFailed = true;
+              reject(new Error("IndexedDB connection blocked"));
+            };
+
+            request.onupgradeneeded = (e) => {
+              const db = e.target.result;
+              if (!db.objectStoreNames.contains('cached-ads')) {
+                db.createObjectStore('cached-ads', { keyPath: 'id' });
+              }
+              if (!db.objectStoreNames.contains('offline-ads')) {
+                db.createObjectStore('offline-ads', { keyPath: 'tempId' });
+              }
+            };
+
+            request.onsuccess = (e) => {
+              clearTimeout(timeoutId);
+              cachedDB = e.target.result;
+              resolve(cachedDB);
+            };
+
+            request.onerror = (e) => {
+              clearTimeout(timeoutId);
+              isDBFailed = true;
+              reject(e.target.error || new Error("IndexedDB error"));
+            };
+          } catch (err) {
+            isDBFailed = true;
+            reject(err);
+          }
         });
       }
 
       async function putItems(storeName, items) {
-        const db = await openDB();
-        return new Promise((resolve, reject) => {
-          const tx = db.transaction(storeName, 'readwrite');
-          const store = tx.objectStore(storeName);
-          items.forEach(item => store.put(item));
-          tx.oncomplete = () => resolve();
-          tx.onerror = (e) => reject(e.target.error);
-        });
+        try {
+          const db = await openDB();
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction(storeName, 'readwrite');
+            const store = tx.objectStore(storeName);
+            items.forEach(item => store.put(item));
+            tx.oncomplete = () => resolve();
+            tx.onerror = (e) => reject(e.target.error);
+          });
+        } catch (err) {
+          console.warn("Falling back to memory storage for putItems:", err);
+          if (storeName === 'offline-ads') {
+            items.forEach(item => {
+              memoryOfflineStore = memoryOfflineStore.filter(i => i.tempId !== item.tempId);
+              memoryOfflineStore.push(item);
+            });
+          } else {
+            items.forEach(item => {
+              memoryCachedStore = memoryCachedStore.filter(i => i.id !== item.id);
+              memoryCachedStore.push(item);
+            });
+          }
+          return Promise.resolve();
+        }
       }
 
       async function getAllItems(storeName) {
-        const db = await openDB();
-        return new Promise((resolve, reject) => {
-          const tx = db.transaction(storeName, 'readonly');
-          const store = tx.objectStore(storeName);
-          const request = store.getAll();
-          request.onsuccess = () => resolve(request.result);
-          request.onerror = (e) => reject(e.target.error);
-        });
+        try {
+          const db = await openDB();
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction(storeName, 'readonly');
+            const store = tx.objectStore(storeName);
+            const request = store.getAll();
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = (e) => reject(e.target.error);
+          });
+        } catch (err) {
+          console.warn("Falling back to memory storage for getAllItems:", err);
+          return storeName === 'offline-ads' ? Promise.resolve(memoryOfflineStore) : Promise.resolve(memoryCachedStore);
+        }
       }
 
       async function deleteItem(storeName, key) {
-        const db = await openDB();
-        return new Promise((resolve, reject) => {
-          const tx = db.transaction(storeName, 'readwrite');
-          const store = tx.objectStore(storeName);
-          store.delete(key);
-          tx.oncomplete = () => resolve();
-          tx.onerror = (e) => reject(e.target.error);
-        });
+        try {
+          const db = await openDB();
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction(storeName, 'readwrite');
+            const store = tx.objectStore(storeName);
+            store.delete(key);
+            tx.oncomplete = () => resolve();
+            tx.onerror = (e) => reject(e.target.error);
+          });
+        } catch (err) {
+          console.warn("Falling back to memory storage for deleteItem:", err);
+          if (storeName === 'offline-ads') {
+            memoryOfflineStore = memoryOfflineStore.filter(i => i.tempId !== key);
+          } else {
+            memoryCachedStore = memoryCachedStore.filter(i => i.id !== key);
+          }
+          return Promise.resolve();
+        }
       }
 
       async function clearStore(storeName) {
-        const db = await openDB();
-        return new Promise((resolve, reject) => {
-          const tx = db.transaction(storeName, 'readwrite');
-          const store = tx.objectStore(storeName);
-          store.clear();
-          tx.oncomplete = () => resolve();
-          tx.onerror = (e) => reject(e.target.error);
-        });
+        try {
+          const db = await openDB();
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction(storeName, 'readwrite');
+            const store = tx.objectStore(storeName);
+            store.clear();
+            tx.oncomplete = () => resolve();
+            tx.onerror = (e) => reject(e.target.error);
+          });
+        } catch (err) {
+          console.warn("Falling back to memory storage for clearStore:", err);
+          if (storeName === 'offline-ads') {
+            memoryOfflineStore = [];
+          } else {
+            memoryCachedStore = [];
+          }
+          return Promise.resolve();
+        }
       }
 
       // Sync offline ads back to the server (with concurrency lock to prevent duplicate uploads)
