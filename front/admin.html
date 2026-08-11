@@ -2987,7 +2987,6 @@
                 const oldFilename = oldAd.src.substring(oldAd.src.lastIndexOf('/') + 1);
                 await sb.storage.from('media').remove([oldFilename]);
               }
-            }
 
             const { error: updateError } = await sb.from('ads').update(adUpdate).eq('id', editId);
             if (updateError) throw updateError;
