@@ -3083,7 +3083,7 @@
 
         // Highlight card in playlist manager without destructive re-render
         document.querySelectorAll(".playlist-item-card").forEach((card) => {
-          const cardId = Number(card.dataset.id);
+          const cardId = card.dataset.id;
           const titleEl = card.querySelector(".playlist-item-title");
           const thumbEl = card.querySelector(".playlist-item-thumb");
           const nowBadge = card.querySelector(".badge-now");
@@ -3126,6 +3126,15 @@
           .on('postgres_changes', { event: '*', schema: 'public', table: 'timer_state' }, (payload) => {
             console.log('Supabase timer state changed:', payload.eventType);
             syncTimerStatus();
+          })
+          .subscribe();
+
+        sb.channel('now-playing-channel')
+          .on('broadcast', { event: 'nowPlaying' }, (payload) => {
+            console.log('Now playing ad changed:', payload);
+            if (payload && payload.payload) {
+              updatePlayingHighlight(payload.payload.adId);
+            }
           })
           .subscribe();
       }

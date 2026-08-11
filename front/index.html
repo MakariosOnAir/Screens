@@ -1321,6 +1321,8 @@
         }
       }
 
+      let nowPlayingChannel = null;
+
       function broadcastNowPlaying(ad) {
         try {
           const payload = ad
@@ -1333,7 +1335,20 @@
               }
             : { none: true, ts: Date.now() };
           localStorage.setItem("lumina_now_playing", JSON.stringify(payload));
-        } catch (e) {}
+
+          if (!nowPlayingChannel) {
+            nowPlayingChannel = sb.channel('now-playing-channel');
+            nowPlayingChannel.subscribe();
+          }
+
+          nowPlayingChannel.send({
+            type: 'broadcast',
+            event: 'nowPlaying',
+            payload: { adId: ad ? ad.id : null }
+          });
+        } catch (e) {
+          console.error("Failed to broadcast now playing:", e);
+        }
       }
 
       function goTo(idx) {
@@ -1622,6 +1637,9 @@
           .subscribe((status) => {
             console.log('Ads realtime subscription status:', status);
           });
+
+        nowPlayingChannel = sb.channel('now-playing-channel');
+        nowPlayingChannel.subscribe();
 
         sb.channel('timer-realtime')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'timer_state' }, (payload) => {
