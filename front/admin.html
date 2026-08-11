@@ -2550,8 +2550,8 @@
         }
 
         const sizeMB = file.size / (1024 * 1024);
-        if (sizeMB > 300) {
-          toast(`⚠ File too large (${sizeMB.toFixed(1)}MB). Max upload limit is 300MB.`);
+        if (sizeMB > 50) {
+          toast(`⚠ File too large (${sizeMB.toFixed(1)}MB). Max upload limit is 50MB.`);
           input.value = "";
           return;
         }
@@ -2795,6 +2795,44 @@
         }
       }
 
+      function uploadToSupabaseWithProgress(filename, file, onProgress) {
+        return new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          const url = `${SUPABASE_URL}/storage/v1/object/media/${filename}`;
+          
+          xhr.open("POST", url, true);
+          xhr.setRequestHeader("Authorization", `Bearer ${SUPABASE_KEY}`);
+          xhr.setRequestHeader("apikey", SUPABASE_KEY);
+          xhr.setRequestHeader("x-upsert", "true");
+
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              const percentComplete = Math.round((e.loaded / e.total) * 100);
+              if (onProgress) onProgress(percentComplete);
+            }
+          };
+
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve(JSON.parse(xhr.responseText));
+            } else {
+              let errMsg = "Upload failed";
+              try {
+                const resp = JSON.parse(xhr.responseText);
+                errMsg = resp.message || errMsg;
+              } catch (ex) {}
+              reject(new Error(errMsg));
+            }
+          };
+
+          xhr.onerror = () => {
+            reject(new Error("Network error during upload"));
+          };
+
+          xhr.send(file);
+        });
+      }
+
       async function saveModal() {
         if (modalMode === "delete") return;
 
@@ -2846,8 +2884,9 @@
             const cleanName = pendingMedia.fileName.replace(/[^a-zA-Z0-9]/g, '_');
             const filename = Date.now() + '_' + cleanName + ext;
             
-            const { error: uploadError } = await sb.storage.from('media').upload(filename, pendingMedia.file);
-            if (uploadError) throw uploadError;
+            await uploadToSupabaseWithProgress(filename, pendingMedia.file, (percent) => {
+              saveBtn.textContent = `Saving (${percent}%)...`;
+            });
             
             const { data: urlData } = sb.storage.from('media').getPublicUrl(filename);
             
@@ -2897,8 +2936,9 @@
               const cleanName = pendingMedia.fileName.replace(/[^a-zA-Z0-9]/g, '_');
               const filename = Date.now() + '_' + cleanName + ext;
               
-              const { error: uploadError } = await sb.storage.from('media').upload(filename, pendingMedia.file);
-              if (uploadError) throw uploadError;
+              await uploadToSupabaseWithProgress(filename, pendingMedia.file, (percent) => {
+                saveBtn.textContent = `Saving (${percent}%)...`;
+              });
               
               const { data: urlData } = sb.storage.from('media').getPublicUrl(filename);
               adUpdate.src = urlData.publicUrl;
