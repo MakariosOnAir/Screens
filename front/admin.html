@@ -1830,7 +1830,7 @@
                 startTime: ad.startTime || null,
                 endTime: ad.endTime || null,
                 showDetails: ad.showDetails,
-                order: Date.now()
+                order: Math.floor(Date.now() / 1000)
               };
 
               const { error: insertError } = await sb.from('ads').insert(newAd);
@@ -2804,7 +2804,7 @@
               startTime: startTime || null,
               endTime: endTime || null,
               showDetails: showDetails,
-              order: Date.now()
+              order: Math.floor(Date.now() / 1000)
             };
 
             const { error: insertError } = await sb.from('ads').insert(newAd);
@@ -2880,7 +2880,7 @@
                 type: pendingMedia.type,
                 fileBlob: pendingMedia.file,
                 fileName: pendingMedia.fileName,
-                order: Date.now()
+                order: Math.floor(Date.now() / 1000)
               };
               
               await putItems('offline-ads', [offlineAd]);
