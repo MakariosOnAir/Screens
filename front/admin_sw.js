@@ -1,9 +1,8 @@
-const CACHE_NAME = 'admin-ads-v1';
+const CACHE_NAME = 'admin-ads-v2';
 const ASSETS = [
   './',
   'admin.html',
-  'admin_manifest.json',
-  'logo.png'
+  'admin_manifest.json'
 ];
 
 self.addEventListener('install', (e) => {
