@@ -1799,6 +1799,7 @@
           if (!offlineAds.length) return;
           
           toast(`🔄 Syncing ${offlineAds.length} offline advertisement(s)...`);
+          let successCount = 0;
           
           for (const ad of offlineAds) {
             try {
@@ -1836,18 +1837,23 @@
               if (insertError) throw insertError;
 
               await deleteItem('offline-ads', ad.tempId);
+              successCount++;
               console.log(`Synced offline ad: ${ad.title}`);
             } catch (err) {
               console.error(`Failed to sync ad ${ad.title}:`, err);
               if (err.message && (err.message.includes('exceeds') || err.message.includes('size') || err.status === 413)) {
                 toast(`⚠ فشل مزامنة "${ad.title}": حجم الملف أكبر من 50 ميجا.`);
                 await deleteItem('offline-ads', ad.tempId); // Clear it from queue to prevent infinite spams
+              } else {
+                toast(`❌ فشل رفع "${ad.title}": ${err.message || 'خطأ في الصلاحيات/الاتصال'}`);
               }
             }
           }
           
-          toast("✅ All offline ads synced successfully!");
-          load();
+          if (successCount > 0) {
+            toast(`✅ تم رفع ${successCount} إعلانات بنجاح!`);
+            load();
+          }
         } catch (err) {
           console.error("Sync error:", err);
         } finally {
