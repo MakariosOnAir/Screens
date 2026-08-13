@@ -335,52 +335,41 @@
 
       /* — Mini stat cards — */
       .panel-stats {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 7px;
-        padding: 14px 16px 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 18px;
+        border-bottom: 1px solid var(--border);
+        direction: rtl;
         flex-shrink: 0;
       }
-      .stat-mini {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 11px;
-        padding: 9px 8px;
+      .stats-text-stack {
         display: flex;
         flex-direction: column;
+        gap: 5px;
+        text-align: right;
+      }
+      .stat-line {
+        display: flex;
         align-items: center;
-        text-align: center;
-        gap: 3px;
-        transition:
-          background 0.2s,
-          border-color 0.2s;
+        gap: 6px;
+        font-size: 13.5px;
+        color: var(--text-muted);
       }
-      .stat-mini:hover {
-        background: var(--surface-hover);
-        border-color: var(--border-strong);
+      .stat-line-label {
+        font-weight: 600;
+        color: var(--text-faint);
       }
-      .stat-mini-icon {
-        font-size: 18px;
-        line-height: 1;
-        opacity: 0.9;
-      }
-      .stat-mini-value {
+      .stat-line-value {
         font-family: "Outfit", sans-serif;
-        font-size: 18px;
+        font-size: 14.5px;
         font-weight: 900;
         color: var(--text);
-        line-height: 1.1;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 100%;
       }
-      .stat-mini-label {
-        font-size: 11px;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--text-faint);
-        font-weight: 600;
+      .panel-controls {
+        display: flex;
+        gap: 7px;
+        align-items: center;
       }
 
       /* — Playlist header — */
@@ -889,11 +878,23 @@
       </div>
 
       <div id="panel">
-        <div class="panel-brand">
+        <div class="panel-brand" style="justify-content: center; padding: 16px 18px 10px;">
           <img src="logo2.png" alt="Logo" />
-          <div class="panel-brand-text">
-            <div class="panel-brand-title">
-              كنيسة السيدة العذراء مريم <br />والشهيد ابي سيفين
+        </div>
+
+        <div class="panel-stats">
+          <div class="stats-text-stack">
+            <div class="stat-line">
+              <span class="stat-line-label">يعرض حالياً:</span>
+              <span class="stat-line-value" id="stat-playing-num">—</span>
+            </div>
+            <div class="stat-line">
+              <span class="stat-line-label">إجمالي الإعلانات:</span>
+              <span class="stat-line-value" id="stat-total">0</span>
+            </div>
+            <div class="stat-line">
+              <span class="stat-line-label">دورة التشغيل:</span>
+              <span class="stat-line-value" id="stat-duration">0 ثانية</span>
             </div>
           </div>
           <div class="panel-controls">
@@ -932,14 +933,6 @@
                 />
               </svg>
             </button>
-          </div>
-        </div>
-
-        <div class="panel-stats">
-          <div class="stat-mini" title="يعرض حالياً">
-            <div class="stat-mini-icon">▶️</div>
-            <div class="stat-mini-value" id="stat-playing-num">—</div>
-            <div class="stat-mini-label">يعرض الآن</div>
           </div>
         </div>
 
