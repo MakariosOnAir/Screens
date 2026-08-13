@@ -507,7 +507,7 @@
         overflow: hidden;
       }
       .panel-title {
-        font-size: 18px;
+        font-size: 20px;
         font-weight: 700;
         color: var(--text);
         white-space: nowrap;
@@ -1275,7 +1275,7 @@
               <div class="panel-title">${ad.title || "إعلان " + (i + 1)}</div>
               <div class="panel-info-sub" style="display:none;"></div>
               <div class="panel-meta">
-                ${isPlaying ? '<span class="now-badge">يعرض الآن</span>' : `<span class="duration-badge">⏱ ${isVideo ? "فيديو" : (ad.duration || 10) + " ثانية"}</span>`}
+                ${isPlaying ? '<span class="now-badge">يعرض الآن</span>' : ''}
               </div>
             </div>
           `;
@@ -1368,7 +1368,7 @@
             meta.innerHTML = '<span class="now-badge">يعرض الآن</span>';
           } else {
             if (badge) badge.remove();
-            meta.innerHTML = `<span class="duration-badge">⏱ ${ad.type === "video" ? "فيديو" : (ad.duration || 10) + " ثانية"}</span>`;
+            meta.innerHTML = '';
           }
         });
         document.getElementById("panel-current").textContent = current + 1;
