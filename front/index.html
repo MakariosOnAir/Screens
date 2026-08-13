@@ -367,7 +367,7 @@
       .stat-mini-value {
         font-family: "Syne", sans-serif;
         font-size: 22px;
-        font-weight: 700;
+        font-weight: 900;
         color: var(--text);
         line-height: 1.1;
         white-space: nowrap;
@@ -548,7 +548,7 @@
 
       .panel-num {
         font-size: 13px;
-        font-weight: 700;
+        font-weight: 900;
         color: var(--text-faint);
         width: 18px;
         text-align: center;
@@ -1373,6 +1373,9 @@
         if (item) item.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
         const ad = list[current];
+        try {
+          localStorage.setItem('lumina_current_ad_id', ad.id);
+        } catch (e) {}
         broadcastNowPlaying(ad);
         resetTimer(ad);
         updateStatCards(list);
@@ -1561,8 +1564,17 @@
           return;
         }
         
-        current =
-          preserveIndex && preserveIndex < list.length ? preserveIndex : 0;
+        const savedAdId = localStorage.getItem('lumina_current_ad_id');
+        let matchedIndex = -1;
+        if (savedAdId) {
+          matchedIndex = list.findIndex(a => a.id === savedAdId);
+        }
+        
+        if (matchedIndex !== -1) {
+          current = matchedIndex;
+        } else {
+          current = preserveIndex && preserveIndex < list.length ? preserveIndex : 0;
+        }
           
         buildPanel(list);
         goTo(current);
