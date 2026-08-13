@@ -338,33 +338,42 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 12px 18px;
+        padding: 12px 14px;
         border-bottom: 1px solid var(--border);
         direction: rtl;
         flex-shrink: 0;
       }
-      .stats-text-stack {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-        text-align: right;
-      }
-      .stat-line {
+      .stats-horizontal-stack {
         display: flex;
         align-items: center;
-        gap: 6px;
-        font-size: 13.5px;
-        color: var(--text-muted);
+        gap: 12px;
       }
-      .stat-line-label {
-        font-weight: 600;
-        color: var(--text-faint);
+      .stat-mini-flat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 2px;
+        min-width: 58px;
       }
-      .stat-line-value {
+      .stat-mini-flat-icon {
+        font-size: 14px;
+        line-height: 1;
+        opacity: 0.9;
+      }
+      .stat-mini-flat-value {
         font-family: "Outfit", sans-serif;
-        font-size: 14.5px;
+        font-size: 15px;
         font-weight: 900;
         color: var(--text);
+        line-height: 1.1;
+      }
+      .stat-mini-flat-label {
+        font-size: 9px;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        color: var(--text-faint);
+        font-weight: 600;
       }
       .panel-controls {
         display: flex;
@@ -883,18 +892,21 @@
         </div>
 
         <div class="panel-stats">
-          <div class="stats-text-stack">
-            <div class="stat-line">
-              <span class="stat-line-label">يعرض حالياً:</span>
-              <span class="stat-line-value" id="stat-playing-num">—</span>
+          <div class="stats-horizontal-stack">
+            <div class="stat-mini-flat" title="إجمالي الإعلانات">
+              <div class="stat-mini-flat-icon">📋</div>
+              <div class="stat-mini-flat-value" id="stat-total">0</div>
+              <div class="stat-mini-flat-label">الإجمالي</div>
             </div>
-            <div class="stat-line">
-              <span class="stat-line-label">إجمالي الإعلانات:</span>
-              <span class="stat-line-value" id="stat-total">0</span>
+            <div class="stat-mini-flat" title="يعرض حالياً">
+              <div class="stat-mini-flat-icon">▶️</div>
+              <div class="stat-mini-flat-value" id="stat-playing-num">—</div>
+              <div class="stat-mini-flat-label">يعرض الآن</div>
             </div>
-            <div class="stat-line">
-              <span class="stat-line-label">دورة التشغيل:</span>
-              <span class="stat-line-value" id="stat-duration">0 ثانية</span>
+            <div class="stat-mini-flat" title="مدة الدورة الكاملة">
+              <div class="stat-mini-flat-icon">⏱</div>
+              <div class="stat-mini-flat-value" id="stat-duration">0 ثانية</div>
+              <div class="stat-mini-flat-label">دورة التشغيل</div>
             </div>
           </div>
           <div class="panel-controls">
