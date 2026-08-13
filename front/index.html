@@ -336,7 +336,7 @@
       /* — Mini stat cards — */
       .panel-stats {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: 1fr;
         gap: 7px;
         padding: 14px 16px 4px;
         flex-shrink: 0;
@@ -360,14 +360,14 @@
         border-color: var(--border-strong);
       }
       .stat-mini-icon {
-        font-size: 13px;
+        font-size: 18px;
         line-height: 1;
-        opacity: 0.85;
+        opacity: 0.9;
       }
       .stat-mini-value {
         font-family: "Syne", sans-serif;
-        font-size: 13px;
-        font-weight: 700;
+        font-size: 24px;
+        font-weight: 800;
         color: var(--text);
         line-height: 1.1;
         white-space: nowrap;
@@ -376,8 +376,8 @@
         max-width: 100%;
       }
       .stat-mini-label {
-        font-size: 8.5px;
-        letter-spacing: 0.06em;
+        font-size: 11px;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
         color: var(--text-faint);
         font-weight: 600;
@@ -930,11 +930,6 @@
         </div>
 
         <div class="panel-stats">
-          <div class="stat-mini" title="إجمالي الإعلانات">
-            <div class="stat-mini-icon">📋</div>
-            <div class="stat-mini-value" id="stat-total">0</div>
-            <div class="stat-mini-label">الإجمالي</div>
-          </div>
           <div class="stat-mini" title="يعرض حالياً">
             <div class="stat-mini-icon">▶️</div>
             <div class="stat-mini-value" id="stat-playing-num">—</div>
@@ -1290,17 +1285,19 @@
         const totalEl = document.getElementById("stat-total");
         const playingEl = document.getElementById("stat-playing-num");
         const durEl = document.getElementById("stat-duration");
-        if (!totalEl) return;
-        totalEl.textContent = list.length;
+        
+        if (totalEl) totalEl.textContent = list.length;
         const dur = list.reduce(
           (s, a) => s + (a.type === "video" ? 0 : Number(a.duration || 10)),
           0,
         );
         if (durEl) durEl.textContent = dur + " ثانية";
-        if (list.length) {
-          playingEl.textContent = current + 1 + "/" + list.length;
-        } else {
-          playingEl.textContent = "—";
+        if (playingEl) {
+          if (list.length) {
+            playingEl.textContent = current + 1 + " / " + list.length;
+          } else {
+            playingEl.textContent = "—";
+          }
         }
       }
 
